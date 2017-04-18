@@ -15,28 +15,25 @@
 // https://github.com/GoogleCloudPlatform/nodejs-docs-samples/tree/master/appengine/websockets
 
 'use strict';
+
 const http = require('http');
 const request = require('request');
-
 const express = require('express');
 const app = express();
 const expressWs = require('express-ws')(app);
 const session = require('express-session');
-
 const bodyParser = require('body-parser');
+const Particle = require('particle-api-js');
+const fs = require('fs');
+
+const particle = new Particle();
 const urlencodedParser = bodyParser.urlencoded({
     extended: false
 })
-
-const Particle = require('particle-api-js');
-const particle = new Particle();
-
 var websocket;
 const ws_port = '50051'; // https://cloud.google.com/shell/docs/limitations#outgoing_connections
 const ws_route = '/ws';
-
-const config_filename = './config.json'
-const fs = require('fs');
+const config_filename = './config.json'; // API keys go here
 const config = JSON.parse(fs.readFileSync(config_filename, 'utf8'));
 
 // In order to use websockets on App Engine, you need to connect directly to
@@ -204,16 +201,29 @@ app.get('/map', restrict, (req, res) => {
     });
 });
 
-// fake an event for testing purposes
-app.get('/event', (req, res) => {
+function random_float(min, max) {
+  return Math.random() * (max - min) + min;
+}
+
+function random_int(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// fake the placement of a device, for testing
+// ex: http://localhost:8080/send_event?id=123ABC&pub=2017-03-30T05:00:46.167Z&lat=39.043756699999996&lng=-77.4874416&acc=50
+// for fully random use: http://localhost:8080/send_event
+app.get('/send_event', restrict, (req, res) => {
+    console.log('params: '+ JSON.stringify(req.query));
     websocket.send(JSON.stringify({
-        id: '32001a001147343339383037',
-        pub: '2017-03-30T05:00:46.167Z',
+        id: req.query.id || Math.floor(Math.random()*16777215).toString(16), // if no id is given create a random one
+        pub: req.query.pub || new Date().toISOString(), // 2017-03-30T05:00:46.167Z
         pos: {
-            lat: 39.043756699999996,
-            lng: -77.4874416
+            lat: parseFloat(req.query.lat) || random_float( -50.0, 70.0), // random lat and lng if none given
+            lng: parseFloat(req.query.lng) || random_float(-180.0, 180.0)
         },
-        acc: 3439
+        acc: parseInt(req.query.acc) || random_int(25, 3000) // if no accuracy is given create a  random one
     }));
     res.send('Event!!');
 });
