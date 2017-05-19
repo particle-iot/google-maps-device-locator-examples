@@ -25,6 +25,10 @@ Set the key in `config.json` using the `map_api_key` variable. The code will inj
 
         git clone https://github.com/kwnevarez/particle-device-locator
 
+1. Change directory:
+
+        cd particle-device-locator
+
 1. Install depedencies using `npm`:
 
         npm install
